@@ -24,9 +24,13 @@ struct parameter {
 	int dup_max_amp;
 	int dup_num;
 
-	int indel_min;
-	int indel_max;
-	int indel_num;
+	int ins_min;
+	int ins_max;
+	int ins_num;
+
+    int del_min;
+	int del_max;
+	int del_num;
 
 	int translocations_min;
 	int translocations_max;
@@ -59,7 +63,7 @@ struct position {
 };
 
 struct struct_var {
-	int type; //0:dup;1:del;2:ins;3:inv;4:tra
+	int type; // NOTE: This is not aligned with the code so it is probably wrong: 0:dup;1:del;2:ins;3:inv;4:tra
 	position pos;
 	position target;
 	std::string seq; //not mandadory!

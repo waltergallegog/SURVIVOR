@@ -77,11 +77,18 @@ parameter parse_param(std::string filename) {
 	tmp.dup_num = parse_value(buffer, buffer_size);
 	myfile.getline(buffer, buffer_size);
 
-	tmp.indel_min = parse_value(buffer, buffer_size);
+	tmp.ins_min = parse_value(buffer, buffer_size);
 	myfile.getline(buffer, buffer_size);
-	tmp.indel_max = parse_value(buffer, buffer_size);
+	tmp.ins_max = parse_value(buffer, buffer_size);
 	myfile.getline(buffer, buffer_size);
-	tmp.indel_num = parse_value(buffer, buffer_size);
+	tmp.ins_num = parse_value(buffer, buffer_size);
+	myfile.getline(buffer, buffer_size);
+
+    tmp.del_min = parse_value(buffer, buffer_size);
+	myfile.getline(buffer, buffer_size);
+	tmp.del_max = parse_value(buffer, buffer_size);
+	myfile.getline(buffer, buffer_size);
+	tmp.del_num = parse_value(buffer, buffer_size);
 	myfile.getline(buffer, buffer_size);
 
 	tmp.translocations_min = parse_value(buffer, buffer_size);
@@ -301,20 +308,28 @@ std::vector<struct_var> generate_mutations(std::string parameter_file, std::map<
 		mut.print = true;
 		svs.push_back(mut);
 	}
-	//indels
-	for (int i = 0; i < par.indel_num; i++) {
-		//std::cout << "indel" << std::endl;
-		if (rand() % 100 <= 50) {
-			mut.type = 1; //insertion
-		} else {
-			mut.type = 4; //deletion
-		}
-		mut.pos = choose_pos(genome, par.indel_min, par.indel_max, svs);
+	//insertions
+	for (int i = 0; i < par.ins_num; i++) {
+		//std::cout << "ins" << std::endl;
+		mut.type = 1; //insertion
+		mut.pos = choose_pos(genome, par.ins_min, par.ins_max, svs);
 		mut.target = mut.pos;
 		mut.copy_num=1;
 		mut.print = true;
 		svs.push_back(mut);
 	}
+
+	//deletions
+	for (int i = 0; i < par.del_num; i++) {
+		//std::cout << "del" << std::endl;
+		mut.type = 4; //deletion
+		mut.pos = choose_pos(genome, par.del_min, par.del_max, svs);
+		mut.target = mut.pos;
+		mut.copy_num=1;
+		mut.print = true;
+		svs.push_back(mut);
+	}
+
 	//inv
 	for (int i = 0; i < par.inv_num; i++) {
 		//	std::cout << "inv" << std::endl;
@@ -422,15 +437,21 @@ std::vector<struct_var> generate_mutations_ref(std::string parameter_file, std::
 	std::vector<struct_var> svs;
 //duplications
 	struct_var mut;
-	//indels
-	for (int i = 0; i < par.indel_num; i++) {
-		//std::cout << "indel" << std::endl;
-		if (rand() % 100 <= 50) {
-			mut.type = 1; //insertion
-		} else {
-			mut.type = 4; //deletion
-		}
-		mut.pos = choose_pos(genome, par.indel_min, par.indel_max, svs);
+	// insertions
+	for (int i = 0; i < par.ins_num; i++) {
+		//std::cout << "ins" << std::endl;
+		mut.type = 1; //insertion
+		mut.pos = choose_pos(genome, par.ins_min, par.ins_max, svs);
+		mut.target = mut.pos;
+		mut.copy_num=1;
+		svs.push_back(mut);
+	}
+
+	// deletions
+		for (int i = 0; i < par.del_num; i++) {
+		//std::cout << "del" << std::endl;
+		mut.type = 4; //deletion
+		mut.pos = choose_pos(genome, par.del_min, par.del_max, svs);
 		mut.target = mut.pos;
 		mut.copy_num=1;
 		svs.push_back(mut);
@@ -931,6 +952,7 @@ void print_vcf_header2(FILE *&file, std::map<std::string, std::string> genome) {
 	fprintf(file, "%s", "##INFO=<ID=SVMETHOD,Number=1,Type=String,Description=\"Type of approach used to detect SV\">\n");
 	fprintf(file, "%s", "##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">\n");
 	fprintf(file, "%s", "##INFO=<ID=AF,Number=.,Type=Integer,Description=\"Allele Frequency.\">\n");
+    fprintf(file, "%s", "##INFO=<ID=dup_num,Number=1,Type=String,Description=\"dummy dup_number field description\">\n");
 	fprintf(file, "%s", "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n");
 
 	fprintf(file, "%s", "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSAMPLE\n");
@@ -1070,7 +1092,7 @@ void simulate_SV(std::string ref_file, std::string parameter_file, float snp_fre
 	//apply vcf to genome?
 	srand(time(NULL));
 	parameter par = parse_param(parameter_file);
-	int min_chr_len = std::max(std::max(par.dup_max, par.indel_max), std::max(par.inv_max, par.translocations_max));
+	int min_chr_len = std::max( {par.dup_max, par.ins_max, par.del_max, par.inv_max, par.translocations_max} );
 	std::map<std::string, std::string> genome = read_fasta(ref_file, min_chr_len);
 
 	if (par.translocations_num > 0 && genome.size() < 2) {
@@ -1222,9 +1244,13 @@ void generate_parameter_file(std::string parameter_file) {
 	fprintf(file2, "%s", "DUPLICATION_maximum_num: 5\n");
 	fprintf(file2, "%s", "DUPLICATION_number: 3\n");
 
-	fprintf(file2, "%s", "INDEL_minimum_length: 20\n");
-	fprintf(file2, "%s", "INDEL_maximum_length: 500\n");
-	fprintf(file2, "%s", "INDEL_number: 1\n");
+	fprintf(file2, "%s", "INS_minimum_length: 20\n");
+	fprintf(file2, "%s", "INS_maximum_length: 500\n");
+	fprintf(file2, "%s", "INS_number: 1\n");
+
+	fprintf(file2, "%s", "DEL_minimum_length: 20\n");
+	fprintf(file2, "%s", "DEL_maximum_length: 500\n");
+	fprintf(file2, "%s", "DEL_number: 1\n");
 
 	fprintf(file2, "%s", "TRANSLOCATION_minimum_length: 1000\n");
 	fprintf(file2, "%s", "TRANSLOCATION_maximum_length: 3000\n");
