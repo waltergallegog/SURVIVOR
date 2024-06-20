@@ -1,0 +1,4 @@
+Debug/**/*.o
+Debug/**/*.d
+Debug/SURVIVOR
+.vscode/*
